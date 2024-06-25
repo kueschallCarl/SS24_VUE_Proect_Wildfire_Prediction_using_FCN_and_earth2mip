@@ -1,1 +1,1 @@
-MODEL_REGISTRY_FOLDER = '/home/Uni-Projects/earth2mip/visualization_web_app/models'
+MODEL_REGISTRY_FOLDER = '/home/workspace/FCN/SS24_VUE_Project_Wildfire_Prediction_using_FCN_and_earth2mip/visualization_web_app/models'
