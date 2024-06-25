@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CesiumJS Globe</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.82/Build/Cesium/Cesium.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.82/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #infoBox {
+            position: absolute;
+            background-color: rgba(42, 42, 42, 0.8);
+            color: white;
+            padding: 4px;
+            border-radius: 4px;
+            display: none;
+        }
+        #controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;  /* Adjust this value as needed */
+            background-color: #000;
+            padding: 20px;
+            border-radius: 0px;
+            display: flex;
+            flex-direction: row; /* Change to row to align items horizontally */
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            gap: 20px; /* Add gap between items */
+        }
+        #controls h2, #controls h3 {
+            margin: 0;
+            margin-bottom: 10px;
+            color: white;
+        }
+        #controls .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        #controls button {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        #controls button:hover {
+            background-color: #666;
+        }
+        #currentTimeIndex {
+            color: white;
+            margin-bottom: 10px;
+        }
+        #progressBar {
+            width: 100%;
+            margin-top: 10px;
+        }
+        #channelSelect, #ensembleSelect {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .select-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .checkbox-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            color: white;
+        }
+        .checkbox-container label {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-container input {
+            margin-right: 5px;
+        }
+        #guideBox {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background-color: rgba(42, 42, 42, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-y: auto;
+            display: none;
+        }
+        #closeGuideButton {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 5px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer" style="width: 100%; height: 100vh;"></div>
+    <div id="infoBox"></div>
+    <div id="controls">
+        <div class="select-container">
+            <h2>Time</h2>
+            <div class="buttons">
+                <button id="prevFrame">Backward</button>
+                <button id="nextFrame">Forward</button>
+            </div>
+            <div id="currentTimeIndex">Time: 0</div>
+            <input type="range" id="progressBar" min="0" max="4" value="0" step="1">
+        </div>
+
+        <div class="select-container">
+            <h3>Channel</h3>
+            <select id="channelSelect"></select>
+        </div>
+
+        <div class="select-container">
+            <h3>Ensemble Member</h3>
+            <select id="ensembleSelect"></select>
+        </div>
+
+        <div class="checkbox-container">
+            <label>
+                <input type="checkbox" id="displayWildfiresCheckbox">
+                Display Wildfires
+            </label>
+            <label>
+                <input type="checkbox" id="displayMarkersCheckbox" checked>
+                Display Markers
+            </label>
+        </div>
+        <button id="guideButton" class="btn btn-info">Guide</button>
+    </div>
+    <div id="guideBox">
+        <button id="closeGuideButton" class="btn btn-secondary btn-sm">Close</button>
+        <div id="guideContent"></div>
+    </div>
+
+    <script>
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxOWNiOWJlYy1iNjUzLTRiYWUtYTNhMC1lZjcyNjI5YjYwZWMiLCJpZCI6MjE5NDQ1LCJpYXQiOjE3MTczNDQ4NjJ9.dZJ7mbhbiw2GWOYiPPGL720XPMXvGPWfLiRsBrNT5SQ';
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: new Cesium.IonImageryProvider({ assetId: 3 }), // Use Cesium World Terrain
+        });
+        var infoBox = document.getElementById('infoBox');
+        var currentTimeIndex = 0;  // Initialize the current time index
+        var maxTimeIndex = 4;  // Default value, will be updated dynamically
+        var config_dict = {};  // To store the fetched config_dict
+        var startTime = new Date();  // Default start time
+        var selectedChannel = 't2m';  // Default channel
+        var selectedEnsemble = 0;  // Default ensemble member
+
+        var displayWildfires = false;
+        var displayMarkers = true;
+
+        // Debounce function to limit the rate of updates
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // Fetch the config_dict from the backend and use it to set maxTimeIndex and startTime
+        fetch('/get_config')
+            .then(response => response.json())
+            .then(data => {
+                config_dict = data;
+                maxTimeIndex = config_dict.simulation_length || 4;  // Default to 4 if not found
+                document.getElementById('progressBar').max = maxTimeIndex;
+                startTime = new Date(config_dict.weather_event.properties.start_time);  // Treat as UTC
+
+                // Populate channelSelect options
+                const channelSelect = document.getElementById('channelSelect');
+                config_dict.weather_event.domains[0].diagnostics[0].channels.forEach(channel => {
+                    const option = document.createElement('option');
+                    option.value = channel;
+                    option.text = channel;
+                    channelSelect.appendChild(option);
+                });
+                channelSelect.value = 't2m';  // Set default value to t2m
+
+                // Populate ensembleSelect options
+                const ensembleSelect = document.getElementById('ensembleSelect');
+                for (let i = 0; i < config_dict.ensemble_members; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.text = `Ensemble Member ${i + 1}`;
+                    ensembleSelect.appendChild(option);
+                }
+            })
+            .catch(error => console.error('Error fetching config:', error))
+            .finally(() => {
+                // All initialization code that depends on maxTimeIndex and startTime goes here
+
+                function getColorFromValue(value, values) {
+                    const channel = channelSelect.value;
+
+                    if (channel === "t2m") {
+                        const minTemp = 10;
+                        const maxTemp = 40;
+
+                        value = Math.max(minTemp, Math.min(value, maxTemp));
+                        const fraction = (value - minTemp) / (maxTemp - minTemp);
+
+                        const r = Math.round(255 * fraction);
+                        const g = 0;
+                        const b = Math.round(255 * (1 - fraction));
+
+                        return Cesium.Color.fromBytes(r, g, b);
+                    } else if (channel === "u10m" || channel === "v10m") {
+                        const minWind = -10;
+                        const maxWind = 10;
+
+                        value = Math.max(minWind, Math.min(value, maxWind));
+                        const fraction = (value - minWind) / (maxWind - minWind);
+
+                        const r = Math.round(255 * fraction);
+                        const g = 0;
+                        const b = Math.round(255 * (1 - fraction));
+
+                        return Cesium.Color.fromBytes(r, g, b);
+                    } else {
+                        // For other channels, use a grayscale value for simplicity
+                        const minValue = Math.min(...values);
+                        const maxValue = Math.max(...values);
+                        const grayscaleValue = Math.round(255 * (value - minValue) / (maxValue - minValue));
+                        return Cesium.Color.fromBytes(grayscaleValue, grayscaleValue, grayscaleValue);
+                    }
+                }
+
+                function updateCurrentTimeDisplay() {
+                    // Calculate the current time based on startTime and currentTimeIndex
+                    let currentTime = new Date(startTime);
+                    currentTime.setUTCHours(currentTime.getUTCHours() + currentTimeIndex * 6);
+                    document.getElementById('currentTimeIndex').innerText = `Time: ${currentTime.toISOString()}`;
+                }
+
+                let currentDataSource = null;
+
+                async function loadData(region, timeIndex, channel, ensemble) {
+                    const response = await fetch(`/data/${region}?time=${timeIndex}&channel=${channel}&ensemble=${ensemble}`);
+                    const data = await response.json();
+                    const pointEntities = new Cesium.CustomDataSource('points');
+
+                    const totalPoints = data.lons.length;
+                    const chunkSize = 20000;
+                    for (let i = 0; i < totalPoints; i += chunkSize) {
+                        const chunkEnd = Math.min(i + chunkSize, totalPoints);
+                        for (let j = i; j < chunkEnd; j++) {
+                            const lon = data.lons[j];
+                            const lat = data.lats[j];
+                            const value = data.values[j];
+                            const wildfireRisk = data.wildfire_risk[j];
+                            const entity = pointEntities.entities.add({
+                                position: Cesium.Cartesian3.fromDegrees(lon, lat),
+                                point: displayMarkers ? {
+                                    pixelSize: 8,
+                                    color: getColorFromValue(value, data.values, wildfireRisk),
+                                } : undefined,
+                                billboard: (displayWildfires && wildfireRisk > 90.0) ? {
+                                    image: '/static/icons/flame_a.png', // Path to your icon image
+                                    width: 32,
+                                    height: 32,
+                                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                                    eyeOffset: new Cesium.Cartesian3(0, 0, -1000) // Ensures the billboard is rendered on top
+                                } : undefined,
+                                properties: {
+                                    value: value.toFixed(2),
+                                    channel: channel,
+                                    longitude: lon,
+                                    latitude: lat,
+                                    wildfireRisk: wildfireRisk.toFixed(2)
+                                }
+                            });
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                    if (currentDataSource) {
+                        viewer.dataSources.remove(currentDataSource);
+                    }
+                    viewer.dataSources.add(pointEntities);
+                    currentDataSource = pointEntities;
+
+                    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+                    handler.setInputAction(function (movement) {
+                        const pickedObject = viewer.scene.pick(movement.endPosition);
+                        if (Cesium.defined(pickedObject) && Cesium.defined(pickedObject.id) && Cesium.defined(pickedObject.id.properties)) {
+                            const longitude = pickedObject.id.properties.longitude.getValue();
+                            const latitude = pickedObject.id.properties.latitude.getValue();
+                            const value = pickedObject.id.properties.value.getValue();
+                            const channel = pickedObject.id.properties.channel.getValue();
+                            const wildfireRisk = pickedObject.id.properties.wildfireRisk;
+                            infoBox.style.display = 'block';
+                            infoBox.style.left = movement.endPosition.x + 10 + 'px';
+                            infoBox.style.top = movement.endPosition.y + 10 + 'px';
+                            infoBox.innerHTML = `Lon: ${longitude.toFixed(2)}, Lat: ${latitude.toFixed(2)}<br>${channel}: ${value}<br>Wildfire Risk: ${wildfireRisk}%`;
+                        } else {
+                            infoBox.style.display = 'none';
+                        }
+                    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+                    await viewer.dataSources.add(Cesium.GeoJsonDataSource.load('/geojson/countries.geo.json', {
+                        stroke: Cesium.Color.YELLOW,
+                        fill: Cesium.Color.TRANSPARENT,
+                        strokeWidth: 2,
+                        markerSymbol: '?'
+                    }));
+                }
+
+                function updateTimeIndex(delta) {
+                    currentTimeIndex = Math.max(0, Math.min(maxTimeIndex, currentTimeIndex + delta));
+                    updateCurrentTimeDisplay();
+                    loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                    document.getElementById('progressBar').value = currentTimeIndex;
+                }
+
+                document.getElementById('prevFrame').addEventListener('click', function() {
+                    updateTimeIndex(-1);
+                });
+
+                document.getElementById('nextFrame').addEventListener('click', function() {
+                    updateTimeIndex(1);
+                });
+
+                const debouncedProgressBarInput = debounce(function() {
+                    currentTimeIndex = parseInt(this.value);
+                    updateCurrentTimeDisplay();
+                    loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                }, 300);
+
+                document.getElementById('progressBar').addEventListener('input', debouncedProgressBarInput);
+
+                document.getElementById('channelSelect').addEventListener('change', function() {
+                    selectedChannel = this.value;
+                    loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                });
+
+                document.getElementById('ensembleSelect').addEventListener('change', function() {
+                    selectedEnsemble = this.value;
+                    loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                });
+
+                document.getElementById('displayWildfiresCheckbox').addEventListener('change', function() {
+                    displayWildfires = this.checked;
+                    loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                });
+
+                document.getElementById('displayMarkersCheckbox').addEventListener('change', function() {
+                    displayMarkers = this.checked;
+                    loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                });
+
+                document.getElementById('guideButton').addEventListener('click', function() {
+                    fetch('/static/channel_guide.md')
+                        .then(response => response.text())
+                        .then(markdown => {
+                            var converter = new showdown.Converter();
+                            var html = converter.makeHtml(markdown);
+                            document.getElementById('guideContent').innerHTML = html;
+                            document.getElementById('guideBox').style.display = 'block';
+                        });
+                });
+
+                document.getElementById('closeGuideButton').addEventListener('click', function() {
+                    document.getElementById('guideBox').style.display = 'none';
+                });
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const region = urlParams.get('region') || 'global';
+                loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                updateCurrentTimeDisplay();
+            });
+    </script>
+</body>
+</html>

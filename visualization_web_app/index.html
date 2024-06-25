@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Configuration</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/styles.css">
+    <script src="static/channels.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 50px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .custom-region, .country-region {
+            display: none;
+        }
+        #terminal {
+            margin-top: 20px;
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        #guideBox {
+            position: fixed;
+            top: 10%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background: white;
+            border: 2px solid #000;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            overflow-y: scroll;
+            display: none;
+            z-index: 1000;
+        }
+        #openGuideButton {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Simulation Configuration</h1>
+        <form id="configForm">
+            <div class="form-group">
+                <label for="ensembleMembers">Ensemble Members:</label>
+                <input type="number" class="form-control" id="ensembleMembers" name="ensembleMembers" value="2">
+            </div>
+
+            <div class="form-group">
+                <label for="simulationLength">Simulation Length (days):</label>
+                <input type="number" class="form-control" id="simulationLength" name="simulationLength" value="7" min="1">
+            </div>
+
+            <div class="form-group">
+                <label for="startTime">Start Time:</label>
+                <input type="datetime-local" class="form-control" id="startTime" name="startTime" value="2023-07-15T00:00:00">
+            </div>
+
+            <div class="form-group">
+                <label for="diagnosticsChannels">Select Diagnostics Channels:</label>
+                <select class="form-control" id="diagnosticsChannels" name="diagnosticsChannels" multiple="multiple"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="channelToModify">Channel to Modify:</label>
+                <select class="form-control" id="channelToModify" name="channelToModify"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="modulatingFactor">Modulating Factor:</label>
+                <input type="number" class="form-control" id="modulatingFactor" name="modulatingFactor" value="1.0" step="0.01">
+            </div>
+
+            <div class="form-group">
+                <label for="regionSelect">Select Region:</label>
+                <select class="form-control" id="regionSelect" name="regionSelect">
+                    <option value="global">Global</option>
+                    <option value="country">Country</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+
+            <div id="countryRegionDiv" class="country-region">
+                <div class="form-group">
+                    <label for="countrySelect">Select Country:</label>
+                    <select class="form-control" id="countrySelect" name="countrySelect"></select>
+                </div>
+                <div class="form-group">
+                    <label for="countryRegionSizeInput">Region Size (degrees):</label>
+                    <input type="number" class="form-control" id="countryRegionSizeInput" name="countryRegionSizeInput" placeholder="Enter region size" min="0.0" step="2.5" value="10">
+                </div>
+            </div>
+
+            <div id="customRegionDiv" class="custom-region">
+                <div class="form-group">
+                    <label for="longitudeInput">Longitude:</label>
+                    <input type="text" class="form-control" id="longitudeInput" name="longitudeInput" placeholder="Enter longitude">
+                </div>
+                <div class="form-group">
+                    <label for="latitudeInput">Latitude:</label>
+                    <input type="text" class="form-control" id="latitudeInput" name="latitudeInput" placeholder="Enter latitude">
+                </div>
+                <div class="form-group">
+                    <label for="regionSizeInput">Region Size (degrees):</label>
+                    <input type="number" class="form-control" id="regionSizeInput" name="regionSizeInput" placeholder="Enter region size" min="0.0" step="2.5" value="10">
+                </div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="skipInference" name="skipInference" checked>
+                <label class="form-check-label" for="skipInference">
+                    Skip Inference
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Start Simulation</button>
+        </form>
+        <div id="terminal"></div>
+    </div>
+
+    <button id="openGuideButton" class="btn btn-info">Guide</button>
+
+    <div id="guideBox">
+        <button id="closeGuideButton" class="btn btn-secondary">Close</button>
+        <div id="guideContent"></div>
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            // Load country list from CSV
+            $.get('/static/country-coord.csv', function(data) {
+                const countries = data.split('\n').map(line => {
+                    const [country, lon, lat] = line.split(',');
+                    return { id: country, text: country, lon: parseFloat(lon), lat: parseFloat(lat) };
+                });
+
+                $('#countrySelect').select2({
+                    placeholder: 'Select country',
+                    data: countries
+                });
+            });
+
+            $('#diagnosticsChannels, #channelToModify').select2({
+                placeholder: 'Select channels',
+                data: channels.map(channel => ({ id: channel, text: channel }))
+            }).val(["t2m", "u10m", "v10m", "r50"]).trigger('change');
+
+            $('#regionSelect').on('change', function() {
+                if ($(this).val() === 'custom') {
+                    $('#customRegionDiv').show();
+                    $('#countryRegionDiv').hide();
+                } else if ($(this).val() === 'country') {
+                    $('#countryRegionDiv').show();
+                    $('#customRegionDiv').hide();
+                } else {
+                    $('#customRegionDiv').hide();
+                    $('#countryRegionDiv').hide();
+                }
+            });
+
+            $('#configForm').submit(function(event){
+                event.preventDefault();
+
+                let config_dict = {
+                    "ensemble_members": 1,
+                    "noise_amplitude": 0.05,
+                    "simulation_length": 4,
+                    "weather_event": {
+                        "properties": {
+                            "name": "Globe",
+                            "start_time": "2023-07-15T00:00:00",
+                            "initial_condition_source": "cds"
+                        },
+                        "domains": [
+                            {
+                                "name": "global",
+                                "type": "Window",
+                                "diagnostics": [{"type": "raw", "channels": ["t2m", "u10m", "v10m"]}]
+                            }
+                        ]
+                    },
+                    "output_path": "outputs/01_ensemble_notebook",
+                    "output_frequency": 1,
+                    "weather_model": "fcnv2_sm",
+                    "seed": 12345,
+                    "use_cuda_graphs": false,
+                    "ensemble_batch_size": 1,
+                    "autocast_fp16": false,
+                    "perturbation_strategy": "correlated",
+                    "noise_reddening": 2.0
+                };
+
+                config_dict.ensemble_members = parseInt($('#ensembleMembers').val());
+                config_dict.simulation_length = parseInt($('#simulationLength').val()) * 4;
+                config_dict.weather_event.properties.start_time = new Date($('#startTime').val() + 'Z').toISOString();
+
+                const selectedChannels = $('#diagnosticsChannels').val();
+                config_dict.weather_event.domains[0].diagnostics[0].channels = selectedChannels;
+
+                const regionSelect = $('#regionSelect').val();
+                const skipInference = $('#skipInference').is(':checked');
+                let longitude = null;
+                let latitude = null;
+                let regionSize = null;
+                let country = null;
+
+                if (regionSelect === 'custom') {
+                    longitude = parseFloat($('#longitudeInput').val());
+                    latitude = parseFloat($('#latitudeInput').val());
+                    regionSize = parseFloat($('#regionSizeInput').val());
+
+                    if (isNaN(longitude) || isNaN(latitude) || isNaN(regionSize)) {
+                        alert('Please enter valid values for longitude, latitude and region size.');
+                        return;
+                    }
+                } else if (regionSelect === 'country') {
+                    const selectedCountry = $('#countrySelect').select2('data')[0];
+                    if (!selectedCountry) {
+                        alert('Please select a valid country.');
+                        return;
+                    }
+                    longitude = selectedCountry.lon;
+                    latitude = selectedCountry.lat;
+                    regionSize = parseFloat($('#countryRegionSizeInput').val());
+
+                    if (isNaN(regionSize)) {
+                        alert('Please enter a valid region size.');
+                        return;
+                    }
+                    country = selectedCountry.id;
+                }
+
+                config_dict.output_path = `outputs/${config_dict.ensemble_members}_ensemble_${config_dict.weather_event.properties.start_time}`;
+
+                const data = {
+                    configText: JSON.stringify(config_dict),
+                    regionSelect: regionSelect,
+                    skipInference: skipInference,
+                    longitude: longitude,
+                    latitude: latitude,
+                    regionSize: regionSize,
+                    country: country,
+                    channelToModify: $('#channelToModify').val(),
+                    modulatingFactor: parseFloat($('#modulatingFactor').val())
+                };
+
+                $.ajax({
+                    url: '/start_simulation',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function() {
+                        window.location.href = '/cesium?region=' + regionSelect;
+                    }
+                });
+            });
+
+            function checkStatus() {
+                $.ajax({
+                    url: '/get_status',
+                    method: 'GET',
+                    success: function(data) {
+                        $('#terminal').text(data.status);
+                        if (data.status !== 'Inference completed') {
+                            setTimeout(checkStatus, 1000); // Poll every second
+                        }
+                    }
+                });
+            }
+
+            function resetStatus() {
+                $.ajax({
+                    url: '/reset_status',
+                    method: 'POST',
+                    success: function() {
+                        $('#terminal').text('idle');
+                        checkStatus();
+                    }
+                });
+            }
+
+            resetStatus();
+
+            // Guide Box functionality
+            function loadGuide() {
+                $.get('static/guide.md', function(data) {
+                    const converter = new showdown.Converter();
+                    const html = converter.makeHtml(data);
+                    $('#guideContent').html(html);
+                });
+            }
+
+            $('#openGuideButton').click(function() {
+                loadGuide();
+                $('#guideBox').show();
+            });
+
+            $('#closeGuideButton').click(function() {
+                $('#guideBox').hide();
+            });
+        });
+    </script>
+</body>
+</html>
