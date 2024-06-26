@@ -18,6 +18,7 @@ import argparse
 import json
 import logging
 import os
+from typing import Callable, Any
 import sys
 from datetime import datetime
 from typing import Any, Optional
@@ -136,7 +137,7 @@ def run_ensembles(
                 break
 
 
-def main(config=None):
+def main(config=None, update_status=None):
     logging.basicConfig(level=logging.INFO)
     if config is None:
         parser = argparse.ArgumentParser()
@@ -165,6 +166,7 @@ def main(config=None):
 
     logger.info(f"Earth-2 MIP config loaded {config}")
     logger.info(f"Loading model onto device {device}")
+    update_status(f"Loading weather-forecasting model...")
     model = get_model(config.weather_model, device=device)
     logger.info("Constructing initializer data source")
     perturb = get_initializer(
@@ -172,7 +174,7 @@ def main(config=None):
         config,
     )
     logger.info("Running inference")
-    run_inference(model, config, perturb, group, channel_to_modify=config_dict['channel_to_modify'], modulating_factor=config_dict['modulating_factor'])
+    run_inference(model, config, perturb, group, channel_to_modify=config_dict['channel_to_modify'], modulating_factor=config_dict['modulating_factor'], update_status = update_status)
 
 def parse_config(config_input):
     config_dict = json.loads(config_input)
@@ -279,7 +281,8 @@ def run_inference(
     progress: bool = True,
     data_source: Any = None,
     channel_to_modify: str = None,
-    modulating_factor: float = None
+    modulating_factor: float = None,
+    update_status: Callable[[str], None] = None
 ):
     """Run an ensemble inference for a given config and a perturb function
 
@@ -296,7 +299,8 @@ def run_inference(
         group = torch.distributed.group.WORLD
 
     weather_event = config.get_weather_event()
-
+    if update_status:
+        update_status("Loading weather data from online 'Climate Data Store (CDS)' (or from cached files). This can take a while depending on CDS server load...")
     if not data_source:
         data_source = initial_conditions.get_data_source(
             model.in_channel_names,
@@ -306,6 +310,8 @@ def run_inference(
 
     date_obj = weather_event.properties.start_time
     x = initial_conditions.get_initial_condition_for_model(model, data_source, date_obj,channel_to_modify=channel_to_modify, modulating_factor=modulating_factor)
+    if update_status:
+        update_status("Now running inference: Using forecasting model to predict upcoming weather conditions...")
     logger.info(f"Initial Conditions dataset: shape {x.size()} Contents: {x.flatten()[:10]}")
     dist = DistributedManager()
     n_ensemble_global = config.ensemble_members

@@ -1,3 +1,5 @@
+# inference.py
+
 import numpy as np
 import datetime
 import os
@@ -24,17 +26,17 @@ from earth2mip.networks.fcnv2_sm import load as fcnv2_sm_load
 from earth2mip.schema import EnsembleRun
 from earth2mip.schema import Grid, PerturbationStrategy
 
-def main():
+def main(update_status):
     print("loading FCNv2 small model, this can take a bit")
-    run_inference(config.CONFIG_SAMPLE_TEXT)
+    run_inference(config.CONFIG_SAMPLE_TEXT, update_status)
 
 def parse_config(config_input):
     config_dict = json.loads(config_input)
     return config_dict
 
-def run_inference(config_input):
+def run_inference(config_input, update_status):
     config_str = json.dumps(config_input)
-    inference_ensemble.main(config_str)
+    inference_ensemble.main(config_str, update_status)
 
 def load_dataset_from_inference_output(config_dict):
     def open_ensemble(f, domain, chunks={"time": 1}):

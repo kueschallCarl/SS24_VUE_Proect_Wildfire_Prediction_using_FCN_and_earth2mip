@@ -222,8 +222,8 @@
                     const channel = channelSelect.value;
 
                     if (channel === "t2m") {
-                        const minTemp = 10;
-                        const maxTemp = 40;
+                        const minTemp = 5;
+                        const maxTemp = 50;
 
                         value = Math.max(minTemp, Math.min(value, maxTemp));
                         const fraction = (value - minTemp) / (maxTemp - minTemp);

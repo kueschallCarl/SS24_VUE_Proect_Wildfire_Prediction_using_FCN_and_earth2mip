@@ -1,3 +1,5 @@
+# app.py
+
 import numpy as np
 from flask import Flask, jsonify, send_from_directory, request, session
 import config
@@ -184,12 +186,16 @@ def start_simulation():
     config_dict['modulating_factor'] = modulating_factor
     session['config_dict'] = config_dict
 
+    def update_status(message):
+        inference_status['status'] = message
+        logger.info(message)
+
     if not skip_inference:
-        inference_status['status'] = 'Inference started, this can take a minute...'
+        update_status('Inference started, this can take a minute...')
         logger.info("Inference started")
-        inference.run_inference(config_dict)
+        inference.run_inference(config_dict, update_status)
         logger.info("Inference completed")
-        inference_status['status'] = 'Inference completed'
+        update_status('Inference completed')
 
     ds = inference.load_dataset_from_inference_output(config_dict=config_dict)
 
