@@ -62,6 +62,8 @@
         #currentTimeIndex {
             color: white;
             margin-bottom: 10px;
+            font-size: 18px;  /* Larger font size */
+            font-weight: bold;  /* Bold text */
         }
         #progressBar {
             width: 100%;
@@ -85,6 +87,7 @@
             flex-direction: column;
             align-items: flex-start;
             color: white;
+            font-size: 20px;
         }
         .checkbox-container label {
             display: flex;
@@ -118,6 +121,30 @@
             top: 10px;
             right: 10px;
         }
+        #legend {
+            position: absolute;
+            bottom: 220px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #legend .colorbar {
+            width: 100%;
+            height: 20px;
+            background: linear-gradient(to right, blue, red);
+            margin: 10px 0;
+        }
+        #legend .labels {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -125,33 +152,33 @@
     <div id="infoBox"></div>
     <div id="controls">
         <div class="select-container">
-            <h2>Time</h2>
+            <h2>Current point in Time</h2>
             <div class="buttons">
-                <button id="prevFrame">Backward</button>
-                <button id="nextFrame">Forward</button>
+                <button id="prevFrame">-6 hours</button>
+                <button id="nextFrame">+6 hours</button>
             </div>
             <div id="currentTimeIndex">Time: 0</div>
             <input type="range" id="progressBar" min="0" max="4" value="0" step="1">
         </div>
 
         <div class="select-container">
-            <h3>Channel</h3>
+            <h3>Weather Parameter to Visualize</h3>
             <select id="channelSelect"></select>
         </div>
 
         <div class="select-container">
-            <h3>Ensemble Member</h3>
+            <h3>Forecasting Run ID</h3>
             <select id="ensembleSelect"></select>
         </div>
 
         <div class="checkbox-container">
             <label>
                 <input type="checkbox" id="displayWildfiresCheckbox">
-                Display Wildfires
+                Visualize regions with high risk of Wildfires
             </label>
             <label>
                 <input type="checkbox" id="displayMarkersCheckbox" checked>
-                Display Markers
+                Visualize Weather Parameter Data
             </label>
         </div>
         <button id="guideButton" class="btn btn-info">Guide</button>
@@ -159,6 +186,15 @@
     <div id="guideBox">
         <button id="closeGuideButton" class="btn btn-secondary btn-sm">Close</button>
         <div id="guideContent"></div>
+    </div>
+
+    <div id="legend">
+        <h3>Legend</h3>
+        <div class="colorbar"></div>
+        <div class="labels">
+            <span id="labelMin">0</span>
+            <span id="labelMax">100</span>
+        </div>
     </div>
 
     <script>
@@ -176,7 +212,20 @@
 
         var displayWildfires = false;
         var displayMarkers = true;
-
+        
+        // Define the correct mapping of channels to display values
+        const channelMapping = {
+                    "t2m": "Temperature",
+                    "u10m": "Wind-Speed West to East",
+                    "v10m": "Wind-Speed South to North",
+                    "r50": "Humidity"
+                };
+        const channelMetricMapping = {
+                    "t2m": "°C",
+                    "u10m": "m/s",
+                    "v10m": "m/s",
+                    "r50": "%"
+                };
         // Debounce function to limit the rate of updates
         function debounce(func, wait) {
             let timeout;
@@ -195,12 +244,12 @@
                 document.getElementById('progressBar').max = maxTimeIndex;
                 startTime = new Date(config_dict.weather_event.properties.start_time);  // Treat as UTC
 
-                // Populate channelSelect options
+                // Populate channelSelect options with mapped display values
                 const channelSelect = document.getElementById('channelSelect');
                 config_dict.weather_event.domains[0].diagnostics[0].channels.forEach(channel => {
                     const option = document.createElement('option');
                     option.value = channel;
-                    option.text = channel;
+                    option.text = channelMapping[channel] || channel;  // Use mapped value or default to channel name if not found
                     channelSelect.appendChild(option);
                 });
                 channelSelect.value = 't2m';  // Set default value to t2m
@@ -210,7 +259,7 @@
                 for (let i = 0; i < config_dict.ensemble_members; i++) {
                     const option = document.createElement('option');
                     option.value = i;
-                    option.text = `Ensemble Member ${i + 1}`;
+                    option.text = `Run ID ${i + 1}`;
                     ensembleSelect.appendChild(option);
                 }
             })
@@ -218,7 +267,7 @@
             .finally(() => {
                 // All initialization code that depends on maxTimeIndex and startTime goes here
 
-                function getColorFromValue(value, values) {
+                function getColorFromValue(value, values, wildfireRisk) {
                     const channel = channelSelect.value;
 
                     if (channel === "t2m") {
@@ -245,6 +294,19 @@
                         const b = Math.round(255 * (1 - fraction));
 
                         return Cesium.Color.fromBytes(r, g, b);
+                    } else if (channel === "r50") {
+                        const minHumidity = 0;
+                        const maxHumidity = 100;
+
+                        const humidityPercentage = value;
+                        value = Math.max(minHumidity, Math.min(humidityPercentage, maxHumidity));
+                        const fraction = (value - minHumidity) / (maxHumidity - minHumidity);
+
+                        const r = 0;
+                        const g = Math.round(255 * fraction);
+                        const b = Math.round(255 * (1 - fraction));
+
+                        return Cesium.Color.fromBytes(r, g, b);
                     } else {
                         // For other channels, use a grayscale value for simplicity
                         const minValue = Math.min(...values);
@@ -254,11 +316,40 @@
                     }
                 }
 
+                function updateLegend(channel) {
+                    const legend = document.getElementById('legend');
+                    const colorbar = legend.querySelector('.colorbar');
+                    const labelMin = document.getElementById('labelMin');
+                    const labelMax = document.getElementById('labelMax');
+
+                    if (channel === 't2m') {
+                        colorbar.style.background = 'linear-gradient(to right, blue, red)';
+                        labelMin.textContent = '5°C';
+                        labelMax.textContent = '50°C';
+                    } else if (channel === 'u10m' || channel === 'v10m') {
+                        colorbar.style.background = 'linear-gradient(to right, blue, red)';
+                        labelMin.textContent = '-10 m/s';
+                        labelMax.textContent = '10 m/s';
+                    } else if (channel === 'r50') {
+                        colorbar.style.background = 'linear-gradient(to right, blue, green)';
+                        labelMin.textContent = '0%';
+                        labelMax.textContent = '100%';
+                    }
+                }
+
                 function updateCurrentTimeDisplay() {
                     // Calculate the current time based on startTime and currentTimeIndex
                     let currentTime = new Date(startTime);
                     currentTime.setUTCHours(currentTime.getUTCHours() + currentTimeIndex * 6);
-                    document.getElementById('currentTimeIndex').innerText = `Time: ${currentTime.toISOString()}`;
+
+                    // Format the current time in a user-friendly format (YYYY-MM-DD HH:00)
+                    const year = currentTime.getUTCFullYear();
+                    const month = String(currentTime.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(currentTime.getUTCDate()).padStart(2, '0');
+                    const hours = String(currentTime.getUTCHours()).padStart(2, '0');
+                    const formattedTime = `${year}-${month}-${day} ${hours}:00`;
+
+                    document.getElementById('currentTimeIndex').innerText = `${formattedTime}`;
                 }
 
                 let currentDataSource = null;
@@ -275,8 +366,11 @@
                         for (let j = i; j < chunkEnd; j++) {
                             const lon = data.lons[j];
                             const lat = data.lats[j];
-                            const value = data.values[j];
+                            let value = data.values[j];
                             const wildfireRisk = data.wildfire_risk[j];
+                            if (channel === "r50") {
+                                value = (value / 10) * 100; // Convert specific humidity (g/kg) to relative humidity (%)
+                            }
                             const entity = pointEntities.entities.add({
                                 position: Cesium.Cartesian3.fromDegrees(lon, lat),
                                 point: displayMarkers ? {
@@ -320,7 +414,9 @@
                             infoBox.style.display = 'block';
                             infoBox.style.left = movement.endPosition.x + 10 + 'px';
                             infoBox.style.top = movement.endPosition.y + 10 + 'px';
-                            infoBox.innerHTML = `Lon: ${longitude.toFixed(2)}, Lat: ${latitude.toFixed(2)}<br>${channel}: ${value}<br>Wildfire Risk: ${wildfireRisk}%`;
+                            console.log("Channel before infobox render: ", channel)
+                            infoBox.innerHTML = `${channelMapping[channel]}: ${value} ${channelMetricMapping[channel]}<br>Wildfire Risk: ${wildfireRisk}%`;
+                            //infoBox.innerHTML = `${channel}: ${value}<br>Wildfire Risk: ${wildfireRisk}%`;
                         } else {
                             infoBox.style.display = 'none';
                         }
@@ -360,6 +456,7 @@
                 document.getElementById('channelSelect').addEventListener('change', function() {
                     selectedChannel = this.value;
                     loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
+                    updateLegend(selectedChannel);
                 });
 
                 document.getElementById('ensembleSelect').addEventListener('change', function() {
@@ -396,6 +493,7 @@
                 const region = urlParams.get('region') || 'global';
                 loadData(region, currentTimeIndex, selectedChannel, selectedEnsemble);
                 updateCurrentTimeDisplay();
+                updateLegend(selectedChannel);  // Initialize the legend with the default channel
             });
     </script>
 </body>
