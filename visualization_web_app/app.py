@@ -6,6 +6,7 @@ import config
 import inference
 import logging
 import pandas as pd
+import copy
 
 logger = logging.getLogger("inference")
 logger.setLevel(logging.INFO)
@@ -117,22 +118,23 @@ def compute_and_add_deltas(ds_json_ready, ds_unmodulated_json_ready):
 
     # Create a new dictionary to hold the deltas
     deltas_dict = {}
-
+    #logger.info(f"WATCH HERE | values before computing delta for modified: {ds_json_ready['values']}")
+    #logger.info(f"WATCH HERE | values before computing delta for unmodified: {ds_unmodulated_json_ready['values']}")
     for key in ds_json_ready.keys():
         if isinstance(ds_json_ready[key], list) and isinstance(ds_unmodulated_json_ready[key], list):
             if len(ds_json_ready[key]) != len(ds_unmodulated_json_ready[key]):
                 raise ValueError(f"Length mismatch for key {key}")
-
+        
             # Compute deltas
-            deltas = [modified - unmodified for modified, unmodified in zip(ds_json_ready[key], ds_unmodulated_json_ready[key])]
-            
-            # Add deltas to the new dictionary
-            deltas_dict[f"{key}_delta"] = deltas
+            if key == "values" or key == "wildfire_risk":
+                deltas = [modified - unmodified for modified, unmodified in zip(ds_json_ready[key], ds_unmodulated_json_ready[key])]
+                # Add deltas to the new dictionary
+                deltas_dict[f"{key}_delta"] = deltas
 
     # Merge the deltas dictionary back into the original dictionary
     ds_json_ready.update(deltas_dict)
-
     return ds_json_ready
+
 
 @app.route('/data/<region_select>')
 def data(region_select):
@@ -152,18 +154,25 @@ def data(region_select):
     config_dict = session.get('config_dict', {})
     ds = session.get('ds')
     
+    logger.info(f"WATCH HERE:config_dict {config_dict}")
+    
     ds = inference.load_dataset_from_inference_output(config_dict=config_dict)
     ds_json_ready = preprocess_xarray_data(ds, channel, ensemble_member_index, region_select, longitude, latitude, region_size, time_index)
     
     if config_dict['modulating_factor'] != 1.0:
-        confict_dict_unmodulated = config_dict
-        confict_dict_unmodulated['modulating_factor'] = 1.0
-        ds_unmodulated = inference.load_dataset_from_inference_output(config_dict=confict_dict_unmodulated)
+        config_dict_unmodulated = copy.deepcopy(config_dict)
+        config_dict_unmodulated['modulating_factor'] = 1.0
+        logger.info(f"WATCH HERE:confict_dict_unmodulated {config_dict_unmodulated}")
+        
+        ds_unmodulated = inference.load_dataset_from_inference_output(config_dict=config_dict_unmodulated)
         ds_unmodulated_json_ready = preprocess_xarray_data(ds_unmodulated, channel, ensemble_member_index, region_select, longitude, latitude, region_size, time_index)
     else:
         ds_unmodulated_json_ready = ds_json_ready
 
     ds_json_ready_with_deltas = compute_and_add_deltas(ds_json_ready, ds_unmodulated_json_ready)
+    #logger.info(f"WATCH HERE: {ds_json_ready_with_deltas.keys()}")
+    #logger.info(f"WATCH HERE | Wildfire Risk delta values: {ds_json_ready_with_deltas['wildfire_risk_delta']}")
+    logger.info(f"WATCH HERE | Value delta values for channel {channel}: {ds_json_ready_with_deltas['values_delta']}")
 
     return jsonify(ds_json_ready_with_deltas)
 
@@ -216,7 +225,7 @@ def start_simulation():
     
         if modulating_factor != 1.0:
             update_status('Inference started for unmodified data, this can take a minute...')
-            config_dict_unmodulated = config_dict
+            config_dict_unmodulated = copy.deepcopy(config_dict)
             config_dict_unmodulated['modulating_factor'] = 1.0
             logger.info("Inference started for unmodified data")
             inference.run_inference(config_dict_unmodulated, update_status)

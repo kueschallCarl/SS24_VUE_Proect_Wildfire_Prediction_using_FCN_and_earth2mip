@@ -369,6 +369,8 @@
                             const lon = data.lons[j];
                             const lat = data.lats[j];
                             let value = data.values[j];
+                            const deltaValue = data.values_delta[j]; // Fetch delta value
+                            const deltaRisk = data.wildfire_risk_delta[j]; // Fetch delta value
                             const wildfireRisk = data.wildfire_risk[j];
                             if (channel === "r50") {
                                 value = (value / 10) * 100; // Convert specific humidity (g/kg) to relative humidity (%)
@@ -388,6 +390,8 @@
                                 } : undefined,
                                 properties: {
                                     value: value.toFixed(2),
+                                    deltaValue: deltaValue.toFixed(2), // Store delta value
+                                    deltaRisk: deltaRisk.toFixed(2),
                                     channel: channel,
                                     longitude: lon,
                                     latitude: lat,
@@ -411,14 +415,14 @@
                             const longitude = pickedObject.id.properties.longitude.getValue();
                             const latitude = pickedObject.id.properties.latitude.getValue();
                             const value = pickedObject.id.properties.value.getValue();
+                            const deltaValue = pickedObject.id.properties.deltaValue.getValue(); // Fetch delta value
+                            const deltaRisk = pickedObject.id.properties.deltaRisk.getValue(); // Fetch delta value
                             const channel = pickedObject.id.properties.channel.getValue();
                             const wildfireRisk = pickedObject.id.properties.wildfireRisk;
                             infoBox.style.display = 'block';
                             infoBox.style.left = movement.endPosition.x + 10 + 'px';
                             infoBox.style.top = movement.endPosition.y + 10 + 'px';
-                            console.log("Channel before infobox render: ", channel)
-                            infoBox.innerHTML = `${channelMapping[channel]}: ${value} ${channelMetricMapping[channel]}<br>Wildfire Risk: ${wildfireRisk}%`;
-                            //infoBox.innerHTML = `${channel}: ${value}<br>Wildfire Risk: ${wildfireRisk}%`;
+                            infoBox.innerHTML = `${channelMapping[channel]}: ${value} ${channelMetricMapping[channel]}<br>Delta to unmodified data: ${deltaValue}<br>Wildfire Risk: ${wildfireRisk}%<br>Risk Delta to unmodified data: ${deltaRisk}`;
                         } else {
                             infoBox.style.display = 'none';
                         }
