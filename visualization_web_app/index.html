@@ -16,73 +16,78 @@
     <script src="static/channels.js"></script>
 
     <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .container {
-            margin-top: 50px;
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .custom-region, .country-region {
-            display: none;
-        }
-        #terminal {
-            margin-top: 20px;
-            background: #000;
-            color: #0f0;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-        }
-        #guideBox {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            width: 630px;
-            height: 900px;
-            background: white;
-            border: 2px solid #000;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            overflow-y: scroll;
-            display: none;
-            z-index: 1000;
-        }
+    body {
+        background-image: url('visualization_web_app/static/backgrounds/background_a.jpg');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+    .container {
+        margin-top: 50px;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .custom-region, .country-region {
+        display: none;
+    }
+    #terminal {
+        margin-top: 20px;
+        background: #000;
+        color: #0f0;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+    }
+    #guideBox {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        width: 630px;
+        height: 900px;
+        background: white;
+        border: 2px solid #000;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        overflow-y: scroll;
+        display: none;
+        z-index: 1000;
+    }
 
-        #openGuideButton {
-            display: block;
-            margin-bottom: 15px;
-        }
+    #openGuideButton {
+        display: block;
+        margin-bottom: 15px;
+    }
 
-        .question-mark {
-            display: inline-block;
-            margin-left: 5px;
-            width: 16px;
-            height: 16px;
-            background-color: grey;
-            color: white;
-            text-align: center;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 12px;
-            line-height: 16px;
-        }
+    .question-mark {
+        display: inline-block;
+        margin-left: 5px;
+        width: 16px;
+        height: 16px;
+        background-color: grey;
+        color: white;
+        text-align: center;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 12px;
+        line-height: 16px;
+    }
 
-        .tooltip {
-            display: block !important;
-            position: absolute;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            transition: none !important;
-            padding: 5px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 1001;
-            max-width: 200px;
-        }
+    .tooltip {
+        display: block !important;
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        transition: none !important;
+        padding: 5px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 1001;
+        max-width: 200px;
+    }
+</style>
+
     </style>
 </head>
 <body>
@@ -364,10 +369,14 @@
             }
     
             $('#openGuideButton').click(function() {
-                loadGuide();
-                $('#guideBox').show();
+                if ($('#guideBox').is(':visible')) {
+                    $('#guideBox').hide();
+                } else {
+                    loadGuide();
+                    $('#guideBox').show();
+                }
             });
-    
+
             $('#closeGuideButton').click(function() {
                 $('#guideBox').hide();
             });

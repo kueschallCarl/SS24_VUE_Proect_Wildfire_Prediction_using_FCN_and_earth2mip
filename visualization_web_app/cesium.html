@@ -101,7 +101,7 @@
             top: 10%;
             left: 10%;
             width: 75%;
-            height: 80%;
+            height: 60%;
             background-color: rgba(42, 42, 42, 0.9);
             color: white;
             padding: 20px;
@@ -475,14 +475,19 @@
                 });
 
                 document.getElementById('guideButton').addEventListener('click', function() {
-                    fetch('/static/channel_guide.md')
-                        .then(response => response.text())
-                        .then(markdown => {
-                            var converter = new showdown.Converter();
-                            var html = converter.makeHtml(markdown);
-                            document.getElementById('guideContent').innerHTML = html;
-                            document.getElementById('guideBox').style.display = 'block';
-                        });
+                    const guideBox = document.getElementById('guideBox');
+                    if (guideBox.style.display === 'block') {
+                        guideBox.style.display = 'none';
+                    } else {
+                        fetch('/static/channel_guide.md')
+                            .then(response => response.text())
+                            .then(markdown => {
+                                var converter = new showdown.Converter();
+                                var html = converter.makeHtml(markdown);
+                                document.getElementById('guideContent').innerHTML = html;
+                                guideBox.style.display = 'block';
+                            });
+                    }
                 });
 
                 document.getElementById('closeGuideButton').addEventListener('click', function() {
