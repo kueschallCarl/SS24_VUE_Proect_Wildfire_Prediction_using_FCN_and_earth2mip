@@ -153,29 +153,21 @@ def data(region_select):
     
     config_dict = session.get('config_dict', {})
     ds = session.get('ds')
-    
-    logger.info(f"WATCH HERE:config_dict {config_dict}")
-    
+        
     ds = inference.load_dataset_from_inference_output(config_dict=config_dict)
     ds_json_ready = preprocess_xarray_data(ds, channel, ensemble_member_index, region_select, longitude, latitude, region_size, time_index)
     
     if config_dict['modulating_factor'] != 1.0:
-        logger.info(f"WATCH HERE: Running both inferences, this should work...")
         
         config_dict_unmodulated = copy.deepcopy(config_dict)
         config_dict_unmodulated['modulating_factor'] = 1.0
-        logger.info(f"WATCH HERE:confict_dict_unmodulated {config_dict_unmodulated}")
         
         ds_unmodulated = inference.load_dataset_from_inference_output(config_dict=config_dict_unmodulated)
         ds_unmodulated_json_ready = preprocess_xarray_data(ds_unmodulated, channel, ensemble_member_index, region_select, longitude, latitude, region_size, time_index)
     else:
-        logger.info(f"WATCH HERE: Setting ds_unmodulated_json_ready = ds_json_ready haha")
         ds_unmodulated_json_ready = ds_json_ready
 
     ds_json_ready_with_deltas = compute_and_add_deltas(ds_json_ready, ds_unmodulated_json_ready)
-    #logger.info(f"WATCH HERE: {ds_json_ready_with_deltas.keys()}")
-    #logger.info(f"WATCH HERE | Wildfire Risk delta values: {ds_json_ready_with_deltas['wildfire_risk_delta']}")
-    logger.info(f"WATCH HERE | Value delta values for channel {channel}: {ds_json_ready_with_deltas['values_delta']}")
 
     return jsonify(ds_json_ready_with_deltas)
 
