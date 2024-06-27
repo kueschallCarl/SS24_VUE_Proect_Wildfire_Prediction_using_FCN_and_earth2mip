@@ -415,14 +415,25 @@
                             const longitude = pickedObject.id.properties.longitude.getValue();
                             const latitude = pickedObject.id.properties.latitude.getValue();
                             const value = pickedObject.id.properties.value.getValue();
+
                             const deltaValue = pickedObject.id.properties.deltaValue.getValue(); // Fetch delta value
                             const deltaRisk = pickedObject.id.properties.deltaRisk.getValue(); // Fetch delta value
+                            // Determine prefixes based on the sign of delta values
+                            const deltaValuePrefix = deltaValue > 0 ? "higher" : "lower";
+                            const deltaRiskPrefix = deltaRisk > 0 ? "higher" : "lower";
+
                             const channel = pickedObject.id.properties.channel.getValue();
                             const wildfireRisk = pickedObject.id.properties.wildfireRisk;
                             infoBox.style.display = 'block';
                             infoBox.style.left = movement.endPosition.x + 10 + 'px';
                             infoBox.style.top = movement.endPosition.y + 10 + 'px';
-                            infoBox.innerHTML = `${channelMapping[channel]}: ${value} ${channelMetricMapping[channel]}<br>Delta to unmodified data: ${deltaValue}<br>Wildfire Risk: ${wildfireRisk}%<br>Risk Delta to unmodified data: ${deltaRisk}`;
+                            
+                            if ( channel != config_dict['channel_to_modify']){
+                                infoBox.innerHTML = `${channelMapping[channel]}: ${value} ${channelMetricMapping[channel]}<br>Wildfire Risk: ${wildfireRisk}%<br>Channel wasn't modified`;
+                            }
+                            else{
+                            infoBox.innerHTML = `${channelMapping[channel]}: ${value} ${channelMetricMapping[channel]}<br>${channelMapping[channel]} is ${Math.abs(deltaValue)} ${channelMetricMapping[channel]} ${deltaValuePrefix} compared to unmodified conditions <br>Wildfire Risk: ${wildfireRisk}%<br>Wildfire Risk is ${Math.abs(deltaRisk)}% ${deltaRiskPrefix} compared to unmodified conditions`;
+                            }
                         } else {
                             infoBox.style.display = 'none';
                         }
