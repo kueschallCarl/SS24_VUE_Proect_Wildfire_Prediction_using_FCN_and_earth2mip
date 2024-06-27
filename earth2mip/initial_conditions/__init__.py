@@ -107,7 +107,16 @@ def get_data_from_source(
     if channel_to_modify is not None:
         try:
             channel_index = channel_names.index(channel_to_modify)
-            x[:, :, channel_index, :, :] *= modulating_factor
+            if channel_to_modify == "t2m":
+                # Convert from Kelvin to Celsius
+                x[:, :, channel_index, :, :] -= 273.15
+                # Apply modulation
+                x[:, :, channel_index, :, :] *= modulating_factor
+                # Convert back from Celsius to Kelvin
+                x[:, :, channel_index, :, :] += 273.15
+            else:
+                # Apply modulation directly for other channels
+                x[:, :, channel_index, :, :] *= modulating_factor
         except ValueError:
             raise ValueError(f"Channel '{channel_to_modify}' not found in channel_names.")
 

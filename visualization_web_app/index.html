@@ -110,20 +110,25 @@
             </div>
             
             <div class="form-group">
-                <label for="channelToModify">Parameter to Modify (Temperature, Wind, Humidity):</label>
+                <label for="channelToModify">Parameter to Modify (Temperature, Wind-Speed, Humidity):</label>
+                <select class="form-control" id="channelToModify" name="channelToModify">
+                    <option value="t2m">Temperature</option>
+                    <option value="v10m">Wind Speed South to North</option>
+                    <option value="u10m">Wind Speed West to East</option>
+                    <option value="r50">Humidity</option>
+                </select>
                 <span class="question-mark" data-toggle="tooltip" title="Select the weather parameter to be modified in the simulation.">?</span>
-                <select class="form-control" id="channelToModify" name="channelToModify"></select>
             </div>
             
             <div class="form-group">
-                <label for="modulatingFactor">Percentage to modify Parameter by across the Globe at Starting-Point in Time(+- n%):</label>
-                <span class="question-mark" data-toggle="tooltip" title="The percentage by which the selected parameter will be adjusted globally at the start of the simulation.">?</span>
+                <label for="modulatingFactor">Percentage to modify Parameter by across the Globe at Starting-Time(+- n%):</label>
+                <span class="question-mark" data-toggle="tooltip" title="The percentage by which the selected parameter will be adjusted globally at the start of the simulation. E.g.: User Input: 10, Input Dataset example value: 100% + 10% = 110% -> 25°C * 1.1 = 27.5°C">?</span>
                 <input type="number" class="form-control" id="modulatingFactor" name="modulatingFactor" value="0.0" step="0.01">
             </div>
             
             <div class="form-group">
-                <label for="regionSelect">Select Region:</label>
-                <span class="question-mark" data-toggle="tooltip" title="Select the geographical region for the simulation.">?</span>
+                <label for="regionSelect">Select Region on the Globe to Visualize:</label>
+                <span class="question-mark" data-toggle="tooltip" title="Select the geographical region for the simulation. The limitation to a subset of the dataset is meant to enable usage with low computational load. ">?</span>
                 <select class="form-control" id="regionSelect" name="regionSelect">
                     <option value="global">Global</option>
                     <option value="country">Country</option>
@@ -204,9 +209,14 @@
 
     
             $('#channelToModify').select2({
-                placeholder: 'Select channels',
-                data: channels.map(channel => ({ id: channel, text: channel }))
-            });
+            placeholder: 'Select channels',
+            data: [
+                { id: 't2m', text: 'Temperature (2m)' },
+                { id: 'v10m', text: 'Wind Speed (10m)' },
+                { id: 'u10m', text: 'Wind Direction (10m)' },
+                { id: 'r50', text: 'Humidity (50m)' }
+            ]
+        });
     
             $('#regionSelect').on('change', function() {
                 if ($(this).val() === 'custom') {
@@ -294,6 +304,7 @@
     
                 config_dict.output_path = `outputs/${config_dict.ensemble_members}_ensemble_${config_dict.weather_event.properties.start_time}`;
     
+                const modulatingFactorValue = parseFloat($('#modulatingFactor').val());
                 const data = {
                     configText: JSON.stringify(config_dict),
                     regionSelect: regionSelect,
@@ -303,9 +314,9 @@
                     regionSize: regionSize,
                     country: country,
                     channelToModify: $('#channelToModify').val(),
-                    modulatingFactor: parseFloat($('#modulatingFactor').val())
+                    modulatingFactor: (modulatingFactorValue / 100) + 1
                 };
-    
+                console.log('modulating factor: ', data.modulatingFactor);
                 $.ajax({
                     url: '/start_simulation',
                     method: 'POST',
