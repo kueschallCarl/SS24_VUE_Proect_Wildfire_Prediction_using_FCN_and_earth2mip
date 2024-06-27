@@ -49,7 +49,10 @@ def load_dataset_from_inference_output(config_dict):
     domains = config_dict["weather_event"]["domains"][0]["name"]
     ensemble_members = config_dict["ensemble_members"]
     output_path = config_dict["output_path"]
-    ds = open_ensemble(os.path.join(output_path, "ensemble_out_0.nc"), domains)
+    try:
+        ds = open_ensemble(os.path.join(output_path, f"ensemble_out_0_{config_dict['channel_to_modify']}_{config_dict['modulating_factor']}.nc"), domains)
+    except Exception as e:
+        print(f"Error loading output data in inference.py: {e}")
     return ds
 
 if __name__ == "__main__":

@@ -110,6 +110,29 @@ def preprocess_xarray_data(ds, channel, ensemble_member_index=0, region_select="
 
     return data_json
 
+def compute_and_add_deltas(ds_json_ready, ds_unmodulated_json_ready):
+    # Ensure both datasets have the same structure
+    if set(ds_json_ready.keys()) != set(ds_unmodulated_json_ready.keys()):
+        raise ValueError("Modified and unmodified datasets have different structures")
+
+    # Create a new dictionary to hold the deltas
+    deltas_dict = {}
+
+    for key in ds_json_ready.keys():
+        if isinstance(ds_json_ready[key], list) and isinstance(ds_unmodulated_json_ready[key], list):
+            if len(ds_json_ready[key]) != len(ds_unmodulated_json_ready[key]):
+                raise ValueError(f"Length mismatch for key {key}")
+
+            # Compute deltas
+            deltas = [modified - unmodified for modified, unmodified in zip(ds_json_ready[key], ds_unmodulated_json_ready[key])]
+            
+            # Add deltas to the new dictionary
+            deltas_dict[f"{key}_delta"] = deltas
+
+    # Merge the deltas dictionary back into the original dictionary
+    ds_json_ready.update(deltas_dict)
+
+    return ds_json_ready
 
 @app.route('/data/<region_select>')
 def data(region_select):
@@ -121,16 +144,28 @@ def data(region_select):
     ensemble_member_index = int(request.args.get('ensemble', 0))
     channel = request.args.get('channel', 't2m')
 
-    if region_select == "custom" or region_select == "country":
+    if region_select in ["custom", "country"]:
         longitude = custom_region_data['longitude']
         latitude = custom_region_data['latitude']
         region_size = custom_region_data['region_size']
     
     config_dict = session.get('config_dict', {})
+    ds = session.get('ds')
+    
     ds = inference.load_dataset_from_inference_output(config_dict=config_dict)
     ds_json_ready = preprocess_xarray_data(ds, channel, ensemble_member_index, region_select, longitude, latitude, region_size, time_index)
+    
+    if config_dict['modulating_factor'] != 1.0:
+        confict_dict_unmodulated = config_dict
+        confict_dict_unmodulated['modulating_factor'] = 1.0
+        ds_unmodulated = inference.load_dataset_from_inference_output(config_dict=confict_dict_unmodulated)
+        ds_unmodulated_json_ready = preprocess_xarray_data(ds_unmodulated, channel, ensemble_member_index, region_select, longitude, latitude, region_size, time_index)
+    else:
+        ds_unmodulated_json_ready = ds_json_ready
 
-    return jsonify(ds_json_ready)
+    ds_json_ready_with_deltas = compute_and_add_deltas(ds_json_ready, ds_unmodulated_json_ready)
+
+    return jsonify(ds_json_ready_with_deltas)
 
 @app.route('/start_simulation', methods=['POST'])
 def start_simulation():
@@ -176,15 +211,24 @@ def start_simulation():
     def update_status(message):
         inference_status['status'] = message
         logger.info(message)
-
+    
     if not skip_inference:
-        update_status('Inference started, this can take a minute...')
-        logger.info("Inference started")
+    
+        if modulating_factor != 1.0:
+            update_status('Inference started for unmodified data, this can take a minute...')
+            config_dict_unmodulated = config_dict
+            config_dict_unmodulated['modulating_factor'] = 1.0
+            logger.info("Inference started for unmodified data")
+            inference.run_inference(config_dict_unmodulated, update_status)
+            logger.info("Inference completed")
+            update_status('Inference completed for unmodified data')
+            
+
+        update_status('Inference started for modified data, this can take a minute...')
+        logger.info("Inference started for modified data")
         inference.run_inference(config_dict, update_status)
         logger.info("Inference completed")
-        update_status('Inference completed')
-
-    ds = inference.load_dataset_from_inference_output(config_dict=config_dict)
+        update_status('Inference completed for modified data')
 
     return '', 200
 

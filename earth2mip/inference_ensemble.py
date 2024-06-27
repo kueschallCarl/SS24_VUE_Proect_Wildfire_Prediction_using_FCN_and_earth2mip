@@ -347,7 +347,7 @@ def run_inference(
             f.write(config.json())
 
     group_rank = torch.distributed.get_group_rank(group, dist.rank)
-    output_file_path = os.path.join(output_path, f"ensemble_out_{group_rank}.nc")
+    output_file_path = os.path.join(output_path, f"ensemble_out_{group_rank}_{channel_to_modify}_{modulating_factor}.nc")
 
     with DS(output_file_path, "w", format="NETCDF4") as nc:
         # assign global attributes
