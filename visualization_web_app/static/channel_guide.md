@@ -1,38 +1,32 @@
-# Channel Guide
+# Guide
 
-## Temperature at height:
-**t2m:** Temperature at 2 meters above the ground.
+Welcome to the Weather Visualization! This guide will help you navigate and utilize the features of the visualization to analyze weather patterns effectively.
 
-## Pressure:
-**sp:** Surface pressure.  
-**msl:** Mean sea level pressure.
+## Navigating Through Time
 
-## Water Vapor:
-**tcwv:** Total column water vapor (amount of water vapor in a column of atmosphere from the surface to the top of the atmosphere).
+- **Time Navigation**: Use the forward and backward buttons to move through different time points and observe how the weather situation evolves.
+- **Time Slider**: Drag the slider to dynamically select your desired date and time.
 
-## Pressure Levels:
-For the following variables, the numbers (50, 100, 150, etc.) indicate the pressure level in hectopascals (hPa), with lower numbers corresponding to higher altitudes in the atmosphere:
+## Selecting Data to Display
 
-## Wind Speed Components:
-**u:** Wind speed in the east-west direction.  
-**v:** Wind speed in the north-south direction.
+**Weather Parameters**: You can choose which weather data to display. Available options include:
+  - **Temperature**
+  - **Wind Speed (South to North)**
+  - **Wind Speed (West to East)**
+  - **Humidity**
 
-## Geopotential Height (z):
-The height above sea level at a given pressure level.
+**Run ID**: Changing the Run ID loads an alternative forecast, offering multiple perspectives on the weather predictions. <br>
+**Weather Parameter Checkbox**: You can toggle the visualization of specific weather parameters on and off.<br>
+**Wildfire Risk Visualization Checkbox**: Toggling the checkbox visualizes regions with a high risk of wildfires at the current time by marking them with a small fire icon.
 
-## Temperature at pressure(t):
-The temperature at a specific pressure level.
+## Interacting with the Globe
 
-## Relative Humidity (r):
-The relative humidity at a specific pressure level.
+- **Hover Information**: Hover over markers on the globe to display detailed information about the predicted weather parameters and wildfire risk at that location and time.
+- **Impact Analysis**: The visualization shows the difference in parameter values between your modified initial conditions and the unaltered weather forecast. This helps you understand the impact of your changes immediately.
 
-## Specific Humidity (q):
-The specific humidity at a specific pressure level (the mass of water vapor per unit mass of air).
+## Weather Parameters Explained
 
-## Examples:
-**u50:** Wind speed in the east-west direction at 50 hPa.  
-**v500:** Wind speed in the north-south direction at 500 hPa.  
-**z1000:** Geopotential height at 1000 hPa.  
-**t700:** Temperature at 700 hPa.  
-**r850:** Relative humidity at 850 hPa.  
-**q925:** Specific humidity at 925 hPa.
+- **Temperature**: Displays the current temperature in Celsius.
+- **Wind Speed (South to North)**: Shows the wind speed moving from south to north in meters per second. Negative values indicate the wind moving in the opposite direction (North to South)
+- **Wind Speed (West to East)**: Displays the wind speed moving from west to east in meters per second. Negative values indicate the wind moving in the opposite direction (East to West)
+- **Humidity**: Indicates the current humidity levels. 75% -> Air is 75% saturated with water

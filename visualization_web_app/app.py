@@ -18,33 +18,22 @@ country_coords = pd.read_csv('static/country-coord.csv')
 country_coords.set_index('country', inplace=True)
 
 def calculate_wildfire_risk(avg_t2m_data, avg_u10m_data, avg_v10m_data, avg_r50_data):
-    # Automatically normalize temperature data
-    min_temp = np.min(avg_t2m_data)
-    max_temp = np.max(avg_t2m_data)
-    normalized_temp = (avg_t2m_data - min_temp) / (max_temp - min_temp)
-    
-    # Automatically normalize wind speed
+    # Calculate wind speed from u and v components
     wind_speed = np.sqrt(avg_u10m_data**2 + avg_v10m_data**2)
-    min_wind = np.min(wind_speed)
-    max_wind = np.max(wind_speed)
-    normalized_wind = (wind_speed - min_wind) / (max_wind - min_wind)
-    
-    # Normalize r50_data inversely, since higher values indicate lower humidity
-    normalized_r50 = (avg_r50_data - np.min(avg_r50_data)) / (np.max(avg_r50_data) - np.min(avg_r50_data))
-    
-    # Calculate risks based on normalized and transformed values using exponential function
-    temp_risk = np.exp((normalized_temp - 0.5) * 2)  # Emphasize high temperatures
-    wind_risk = np.exp((normalized_wind - 0.5) * 2)  # Emphasize high wind speeds
-    dry_risk = np.exp((normalized_r50 - 0.5) * 2)  # Emphasize low humidity
-    
+
+    # Calculate risks based on raw values using exponential function
+    temp_risk = np.exp((avg_t2m_data - 273.15) / 10)  # Scale temperature (converted to Celsius) appropriately
+    wind_risk = np.exp(wind_speed / 10)  # Scale wind speed appropriately
+    dry_risk = np.exp((100 - avg_r50_data) / 10)  # Inverse scaling for humidity
+
     # Weightings for each risk component
     temp_weight = 0.8
     wind_weight = 0.1
     dry_weight = 0.1
-    
+
     # Calculate wildfire risk for each point
     wildfire_risk = (temp_risk * temp_weight + wind_risk * wind_weight + dry_risk * dry_weight)
-    
+
     # Normalize the final wildfire risk to be between 0 and 1
     wildfire_risk = (wildfire_risk - np.min(wildfire_risk)) / (np.max(wildfire_risk) - np.min(wildfire_risk))
     return wildfire_risk * 100
@@ -64,8 +53,7 @@ def preprocess_xarray_data(ds, channel, ensemble_member_index=0, region_select="
     lon_grid_flat = lon_grid.flatten()
     lat_grid_flat = lat_grid.flatten()
     data_flat = data.flatten()
-    # Calculate wildfire risk for all datapoints
-    # Calculate wildfire risk for all datapoints
+    
     if time_index == 0:
         t2m_data = ds.t2m[ensemble_member_index, time_index:time_index+1, :, :].values
         u10m_data = ds.u10m[ensemble_member_index, time_index:time_index+1, :, :].values
@@ -120,9 +108,8 @@ def preprocess_xarray_data(ds, channel, ensemble_member_index=0, region_select="
         'wildfire_risk': downsampled_wildfire_risk.tolist()
     }
 
-    #print(data_json['wildfire_risk'])
-
     return data_json
+
 
 @app.route('/data/<region_select>')
 def data(region_select):

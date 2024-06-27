@@ -1,93 +1,122 @@
-# User Guide for Simulation Configuration
+# VUE Project Wildfire Prediction and Visualization using FourCastNet
 
-Welcome to the Simulation Configuration Interface. This guide will help you understand how to use the various UI elements to set up and run your simulations.
+## Simulation Configuration Guide
 
-## UI Elements
+This guide will help you set up the simulation for predicting and visualizing wildfire risks using FourCastNet. Follow the steps below:
 
-### Ensemble Members
-- **Description:** Number of ensemble members to use for the simulation.
-- **Input:** A numeric value.
-- **Default:** 2
+### Step-by-Step Configuration
 
-### Simulation Length
-- **Description:** Length of the simulation in days.
-- **Input:** A numeric value.
-- **Default:** 7
-- **Minimum Value:** 1
+<ol>
+  <li>Number of Times Weather Conditions should be Predicted:
+    <ul>
+      <li>Number of times the weather prediction simulation will run.</li>
+      <li><strong>Example:</strong> Enter <code>2</code>. This will run the prediction 2 times and provide a second 'opinion'.</li>
+    </ul>
+  </li>
 
-### Start Time
-- **Description:** Start time for the simulation.
-- **Input:** A date and time picker.
-- **Default:** 2023-07-15T00:00:00
+  <li>Number of Days to Forecast Weather:
+    <ul>
+      <li>The duration in days for which the weather will be forecasted.</li>
+      <li><strong>Example:</strong> Enter <code>7</code>. This will forecast 7 days into the future</li>
+    </ul>
+  </li>
 
-### Diagnostics Channels
-- **Description:** Select the diagnostics channels you want to include in the simulation.
-- **Input:** A multi-select dropdown.
-- **Default:** t2m, u10m, v10m, r50
-- **Note:** The t2m channel will always be included.
+  <li>Starting-Point in Time for Weather Forecasting:
+    <ul>
+      <li>The initial time from which the weather forecast simulation will start.</li>
+      <li><strong>Example:</strong> Enter <code>2023-07-15T00:00:00</code>. This causes the forecast to start on the 15th of July 2023.</li>
+    </ul>
+  </li>
 
-### Region Selection
-- **Description:** Select the region for the simulation.
-- **Options:** 
-  - Global
-  - Country
-  - Custom
+  <li>Parameter to Modify:
+    <ul>
+      <li>Select the weather parameter to be modified in the simulation.</li>
+      <li><strong>Options:</strong>
+        <ul>
+          <li><code>Temperature</code></li>
+          <li><code>Wind Speed West to East</code></li>
+          <li><code>Wind Speed South to North</code></li>
+          <li><code>Humidity</code></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 
-#### Country Region
-- **Description:** When 'Country' is selected, you can choose a specific country and region size.
-- **Inputs:**
-  - **Country:** A dropdown to select the country.
-  - **Region Size:** A numeric input to specify the region size in degrees.
+  <li>Percentage to Modify Parameter by Across the Globe at Starting-Time:
+    <ul>
+      <li>The percentage by which the selected parameter will be adjusted globally at the start of the simulation.</li>
+      <li><strong>Example:</strong> Enter <code>10</code> for a 10% modification. In other words: 100% + 10% = 110% -> 25°C * 1.1 = 27.5°C</li>
+    </ul>
+  </li>
 
-#### Custom Region
-- **Description:** When 'Custom' is selected, you can specify custom coordinates and region size.
-- **Inputs:**
-  - **Longitude:** Longitude of the center of the region.
-  - **Latitude:** Latitude of the center of the region.
-  - **Region Size:** Region size in degrees.
+  <li>Select Region on the Globe to Visualize:
+    <ul>
+      <li>Select the geographical region for the simulation.</li>
+      <li><strong>Options:</strong>
+        <ul>
+          <li><code>Global</code></li>
+          <li><code>Country</code></li>
+          <li><code>Custom</code></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ol>
+
+### Additional Configuration for Selected Regions
+
+- **Country:**
+  <ol>
+    <li>Select Country:
+      <ul>
+        <li>Select a specific country for the simulation. The center coordinate of the selected country will be the center of the visualized data. The breadth and width of the visualized area from that point onward depends on the choice of 'Region Size</li>
+      </ul>
+    </li>
+    <li>Region Size (degrees):
+      <ul>
+        <li>Specify the size of the region around the selected country.</li>
+        <li><strong>Example:</strong> Enter <code>10</code>. This will visualize a data in 10 degrees latitude and longitude around the center of the selected country or custom coordinate, in a square block.</li>
+      </ul>
+    </li>
+  </ol>
+
+- **Custom:**
+  <ol>
+    <li>Longitude:
+      <ul>
+        <li>Enter the value of longitude for the custom location.</li>
+      </ul>
+    </li>
+    <li>Latitude:
+      <ul>
+        <li>Enter the value of latitude for the custom location.</li>
+      </ul>
+    </li>
+    <li>Region Size (degrees):
+      <ul>
+        <li>Specify the size of the custom region.</li>
+        <li><strong>Example:</strong> Enter <code>10</code>. This will visualize a data in 10 degrees latitude and longitude around the center of the selected country or custom coordinate, in a square block.</li>
+      </ul>
+    </li>
+  </ol>
 
 ### Skip Inference
-- **Description:** Skip the inference step if checked.
-- **Input:** A checkbox.
-- **Default:** Checked
+- Check this box if you want to skip running the model from scratch and use existing results. The project stores prediction output locally once performed once. This data will be detected automatically meaning that you don't have to run the model twice for a given configuration. <br>
+**IMPORTANT**: Changing the starting date-time for the forecast or the percentage to modify parameter by, the model has to be run again.
 
-### Start Simulation Button
-- **Description:** Start the simulation with the specified configuration.
-- **Action:** Submits the form and starts the simulation.
+### Example Configuration
 
-### Terminal
-- **Description:** Displays the current status of the simulation.
-- **Output:** Text status messages.
+To help you get started, here's an example setup for predicting temperature changes over the United States:
 
-## Instructions
+1. **Number of Times Weather Conditions should be Predicted:** `3`
+2. **Number of Days to Forecast Weather:** `5`
+3. **Starting-Point in Time for Weather Forecasting:** `2023-07-15T00:00:00`
+4. **Parameter to Modify:** `Temperature`
+5. **Percentage to Modify Parameter by Across the Globe at Starting-Time:** `5`
+6. **Select Region on the Globe to Visualize:** `Country`
+7. **Select Country:** `United States`
+8. **Region Size (degrees):** `15`
 
-1. **Configure the Simulation Parameters:**
-   - Set the number of ensemble members.
-   - Specify the simulation length.
-   - Choose the start time for the simulation.
+With this configuration, you will run a simulation three times over five days starting from July 15, 2023, focusing on temperature changes in the United States, adjusting the temperature by 5%.
 
-2. **Select Diagnostics Channels:**
-   - Use the multi-select dropdown to choose the channels you want.
-   - Ensure that the t2m channel is included (it will be automatically added if not selected).
-
-3. **Choose the Region:**
-   - Select 'Global' for a global simulation.
-   - Select 'Country' to choose a specific country and set the region size.
-   - Select 'Custom' to specify custom coordinates and region size.
-
-4. **Skip Inference:**
-   - Check the box if you want to skip the inference step.
-
-5. **Start the Simulation:**
-   - Click the 'Start Simulation' button to begin the simulation with the specified configuration.
-
-6. **Monitor the Status:**
-   - Check the terminal at the bottom of the interface for status updates.
-
-## Additional Information
-
-- The `Guide` button in the interface can be used to open and close this guide.
-- Ensure all inputs are valid before starting the simulation to avoid errors.
-- The simulation results can be viewed in the CesiumJS visualization interface.
-
-For more detailed information, please refer to the project documentation.
+Follow these steps, and you will be able to set up and run your simulation successfully.
