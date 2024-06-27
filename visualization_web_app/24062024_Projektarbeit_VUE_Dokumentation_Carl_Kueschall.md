@@ -19,13 +19,12 @@ The core feature of this project is the ability to predict wildfires globally us
 The project uses the [Cesium.ion](https://cesium.com/platform/cesium-ion/) framework to visualize prediction data. This interactive, web-based visualization allows users to explore weather conditions and wildfire risks in an intuitive, user-friendly manner. Users can navigate a 3D globe, view different weather parameters, and observe predicted wildfire risks.
 
 ### Customizable Simulation Configuration
-Users can customize their simulations via a web interface provided by the `index.html` file. This includes setting parameters such as:
-- The number of ensemble members
-- Simulation length
-- Start time
-- Diagnostics channels to monitor (e.g., temperature, wind speed)
+Users can customize their simulations via a web interface. This includes setting parameters such as:
+- The number of model runs for more 'opinions' on the weather forecast
+- Simulation length (in days)
+- Start time (date-time)
 - Regions of interest (global, specific countries, or custom-defined regions)
-- Modulating factors to adjust weather conditions
+- Modifying initial conditions for a weather parameter such as temperature, to see what could (have) happen(ed) in an alternative past, or present.
 
 ### Real-Time Data Interaction
 The visualization framework supports real-time interaction with the data. Users can:
@@ -37,11 +36,11 @@ The visualization framework supports real-time interaction with the data. Users 
 ### Wildfire Risk Calculation
 The application includes a detailed method for calculating wildfire risks based on normalized temperature, wind speed, and humidity data. This calculation is integral to the visualization, highlighting areas of high wildfire risk based on real-time weather conditions.
 
-
+s
 ## Installation and Setup
 
 ### Step 1 | Earth2Mip Repository
-First of all, [my fork of the earth2mip repository](https://github.com/kueschallCarl/earth2mip) has to be cloned to your location of choice using git. I recommend using Linux or WSL 2.0, in combination with miniConda for the installation of this project.
+First of all, [my repository](https://github.com/kueschallCarl/SS24_VUE_Proect_Wildfire_Prediction_using_FCN_and_earth2mip) has to be cloned to your location of choice using git. I recommend using Linux or WSL 2.0, in combination with miniConda for the installation of this project.
 
 ### Step 2 | Downloading and Inserting the FCNv2_small Model
 **Option A**: Install model via Modulus Framework using Docker
