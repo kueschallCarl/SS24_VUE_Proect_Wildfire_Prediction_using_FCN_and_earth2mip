@@ -154,11 +154,11 @@
     <div id="controls">
         <div class="select-container">
             <h2>Current point in Time</h2>
+            <div id="currentTimeIndex">Time: 0</div>
             <div class="buttons">
                 <button id="prevFrame">-6 hours</button>
                 <button id="nextFrame">+6 hours</button>
             </div>
-            <div id="currentTimeIndex">Time: 0</div>
             <input type="range" id="progressBar" min="0" max="4" value="0" step="1">
         </div>
 
@@ -296,6 +296,7 @@
 
                         return Cesium.Color.fromBytes(r, g, b);
                     } else if (channel === "r50") {
+                        console.log("Humidity values in colorFromValue: ", value)
                         const minHumidity = 0;
                         const maxHumidity = 100;
 
